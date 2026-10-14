@@ -1,28 +1,82 @@
 # Solar Measurement QC
 
-A Python pipeline for quality-controlling solar irradiance measurements from ground-based monitoring stations.
+A Python pipeline for quality-controlling ground-based solar irradiance measurements using physical limits, solar geometry, clear-sky modelling, and irradiance consistency checks.
 
 ## Overview
 
-This project processes time-series solar radiation data (GHI, DHI, DNI, and related meteorological variables) stored in NetCDF format, applying automated quality control checks against physical and statistical limits. It compares measured irradiance against clear-sky and extraterrestrial radiation models to flag suspect or invalid data points.
+This project processes 1-minute time-series solar radiation data stored in NetCDF format from multiple monitoring stations.
+
+The workflow evaluates **Global Horizontal Irradiance (GHI)**, **Diffuse Horizontal Irradiance (DHI)**, and **Direct Normal Irradiance (DNI)** using a combination of physically based and statistical quality-control tests.
+
+Measured irradiance is compared against solar geometry, extraterrestrial radiation, clear-sky estimates, and relationships between irradiance components to identify suspect or inconsistent observations.
+
+## Quality-Control Methods
+
+The pipeline includes:
+
+- **Physically Possible Limits (PPL)** for GHI, DHI, and DNI
+- **Extremely Rare Limits (ERL)** for identifying unusual irradiance measurements
+- **Three-component closure testing** using the relationship between GHI, DHI, DNI, and solar zenith angle
+- **Two-component consistency checks** between irradiance measurements
+- **K-value tests** for clearness, direct-beam transmittance, and diffuse-fraction consistency
+- **Clear-sky comparison** using `pvlib`
+- **Cloud-enhancement analysis** to distinguish unusual atmospheric events from possible measurement errors
+- **Solar azimuth/elevation analysis** for identifying possible recurring shading effects
+- **Combined QC flags and bitmask encoding** to preserve the reason for each flagged observation
 
 ## Features
 
-- Reads and parses multi-station NetCDF solar measurement archives (`xarray`)
-- Extracts irradiance channels (GHI, DHI, DNI) and associated QC flags/tests
-- Computes solar position and extraterrestrial/clear-sky radiation using `pvlib`
-- Applies configurable QC limits and flagging logic per station
-- Visualizes daily/annual irradiance patterns as heatmaps and time-series plots
+- Reads and processes multi-station NetCDF measurement archives using `xarray`
+- Extracts irradiance and meteorological variables
+- Checks timestamp continuity and missing-data patterns
+- Computes solar position and extraterrestrial irradiance using `pvlib`
+- Generates clear-sky irradiance estimates
+- Applies multiple independent QC tests
+- Combines QC results into machine-readable quality flags
+- Compares QC behaviour between measurement stations
+- Visualizes daily and annual irradiance patterns using heatmaps and time-series plots
 
 ## Data
 
-Input data consists of 1-minute resolution measurements from multiple stations, including:
-- Global Tilted/Horizontal Irradiance (GTI/GHI)
+The input datasets contain 1-minute resolution measurements including:
+
+- Global Horizontal Irradiance (GHI)
 - Direct Normal Irradiance (DNI)
 - Diffuse Horizontal Irradiance (DHI)
-- Relative humidity, temperature, and solar zenith angle
-- Per-variable QC flags and test codes
+- Temperature
+- Relative humidity
+- Solar zenith and azimuth angles
+- Station and sensor metadata
 
-## Tech stack
+The current analysis compares measurements from two ground-based monitoring stations over approximately one year.
 
-`xarray` · `pvlib` · `pandas` · `numpy` · `matplotlib`
+## Example Physical Consistency Check
+
+The three irradiance components should approximately satisfy:
+
+```text
+GHI ≈ DHI + DNI × cos(SZA)
+```
+
+where `SZA` is the solar zenith angle.
+
+Large deviations from this relationship can indicate measurement inconsistencies or sensor-related issues.
+
+## QC Output
+
+Each quality-control test produces an independent flag.
+
+These flags are combined using a **bitmask**, allowing a single observation to retain information about multiple simultaneous QC failures.
+
+This makes it possible to identify both:
+
+- whether a measurement is suspicious
+- why it was flagged
+
+## Tech Stack
+
+`Python` · `xarray` · `pvlib` · `pandas` · `NumPy` · `matplotlib` · `netCDF4`
+
+`main.ipynb`
+
+The notebook covers data inspection, solar-position calculations, QC testing, clear-sky analysis, flag aggregation, and comparison between monitoring stations.
